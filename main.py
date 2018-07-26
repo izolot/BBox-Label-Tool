@@ -33,7 +33,7 @@ class LabelTool():
         # initialize global state
         self.imageDir = ''
         self.imageList= []
-        self.is_yolo_format = False
+        self.yolo_format = IntVar()
         self.egDir = ''
         self.egList = []
         self.outDir = ''
@@ -75,6 +75,8 @@ class LabelTool():
         self.parent.bind("a", self.prevImage) # press 'a' to go backforward
         self.parent.bind("d", self.nextImage) # press 'd' to go forward
         self.mainPanel.grid(row = 1, column = 1, rowspan = 4, sticky = W+N)
+        self.checkbox = Checkbutton(self.frame, text = 'YOLO format', onvalue=1, offvalue=0, variable = self.yolo_format)
+        self.checkbox.grid(row = 1, column = 3,  sticky = W+N)
 
         # showing bbox info & delete bbox
         self.lb1 = Label(self.frame, text = 'Bounding boxes:')
@@ -197,8 +199,12 @@ class LabelTool():
 
     def saveImage(self):
         with open(self.labelfilename, 'w') as f:
-            f.write('%d\n' %len(self.bboxList))
+            if self.yolo_format.get():
+                f.write('%d  ' %len(self.bboxList))
+            else:
+                f.write('%d\n' %len(self.bboxList))
             for bbox in self.bboxList:
+                
                 f.write(' '.join(map(str, bbox)) + '\n')
         print('Image No. %d saved' %(self.cur))
 
@@ -206,14 +212,28 @@ class LabelTool():
     def mouseClick(self, event):
         if self.STATE['click'] == 0:
             self.STATE['x'], self.STATE['y'] = event.x, event.y
+        
         else:
-            x1, x2 = min(self.STATE['x'], event.x), max(self.STATE['x'], event.x)
-            y1, y2 = min(self.STATE['y'], event.y), max(self.STATE['y'], event.y)
-            self.bboxList.append((x1, y1, x2, y2))
-            self.bboxIdList.append(self.bboxId)
-            self.bboxId = None
-            self.listbox.insert(END, '(%d, %d) -> (%d, %d)' %(x1, y1, x2, y2))
-            self.listbox.itemconfig(len(self.bboxIdList) - 1, fg = COLORS[(len(self.bboxIdList) - 1) % len(COLORS)])
+            xmin, xmax = min(self.STATE['x'], event.x), max(self.STATE['x'], event.x)
+            ymin, ymax = min(self.STATE['y'], event.y), max(self.STATE['y'], event.y)
+
+            if self.yolo_format.get():
+                box = (float(xmin), float(xmax), float(ymin), float(ymax))
+                widht = self.tkimg.width()
+                height = self.tkimg.height()
+                c = self.convert_to_yolo_format(widht,height,box)
+                self.bboxList.append(c)
+                self.bboxIdList.append(self.bboxId)
+                self.bboxId = None
+                self.listbox.insert(END, '%.3f, %.3f , %.3f, %.3f'%(c))
+                self.listbox.itemconfig(len(self.bboxIdList) - 1, fg = COLORS[(len(self.bboxIdList) - 1) % len(COLORS)])
+            else:
+                self.bboxList.append((xmin, ymin, xmax, ymax))
+                self.bboxIdList.append(self.bboxId)
+                self.bboxId = None
+                self.listbox.insert(END, '(%d, %d) -> (%d, %d)' %(xmin, ymin, xmax, ymax))
+                self.listbox.itemconfig(len(self.bboxIdList) - 1, fg = COLORS[(len(self.bboxIdList) - 1) % len(COLORS)])
+        
         self.STATE['click'] = 1 - self.STATE['click']
 
     def mouseMove(self, event):
@@ -277,9 +297,9 @@ class LabelTool():
             self.loadImage()
     
     #convert func from convert.py Guanghan Ning
-    def convert_to_yolo_format(self,size, box):
-        dw = 1./size[0]
-        dh = 1./size[1]
+    def convert_to_yolo_format(self,widht_img, height_img, box):
+        dw = 1./widht_img
+        dh = 1./height_img
         x = (box[0] + box[1])/2.0
         y = (box[2] + box[3])/2.0
         w = box[1] - box[0]
