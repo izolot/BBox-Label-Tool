@@ -44,6 +44,7 @@ class LabelTool():
         self.labelfilename = ''
         self.tkimg = None
         self.folder = ''
+        self.cls = 0
 
         # initialize mouse state
         self.STATE = {}
@@ -200,13 +201,15 @@ class LabelTool():
     def saveImage(self):
         with open(self.labelfilename, 'w') as f:
             if self.yolo_format.get():
-                f.write('%d  ' %len(self.bboxList))
+                s = str(self.cls) + ' '
+                for bbox in self.bboxList:
+                    f.write(s + ' '.join(map(str, bbox)) + '\n')
+                    print('Image No. %d saved' %(self.cur))
             else:
                 f.write('%d\n' %len(self.bboxList))
-            for bbox in self.bboxList:
-                
-                f.write(' '.join(map(str, bbox)) + '\n')
-        print('Image No. %d saved' %(self.cur))
+                for bbox in self.bboxList:
+                    f.write(' '.join(map(str, bbox)) + '\n')
+                    print('Image No. %d saved' %(self.cur))
 
 
     def mouseClick(self, event):
