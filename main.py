@@ -168,9 +168,13 @@ class LabelTool():
 
     def loadImage(self):
         # load image
+        basewidth = 400
         imagepath = self.imageList[self.cur - 1]
         self.img = Image.open(imagepath)
-        self.tkimg = ImageTk.PhotoImage(self.img)
+        wpercent = (basewidth/float(self.img.size[0]))
+        hsize = int((float(self.img.size[1])*float(wpercent)))
+        img = self.img.resize((basewidth,hsize), Image.ANTIALIAS)
+        self.tkimg = ImageTk.PhotoImage(img)
         self.mainPanel.config(width = max(self.tkimg.width(), 400), height = max(self.tkimg.height(), 400))
         self.mainPanel.create_image(0, 0, image = self.tkimg, anchor=NW)
         self.progLabel.config(text = "%04d/%04d" %(self.cur, self.total))
