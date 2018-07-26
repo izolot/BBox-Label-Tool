@@ -8,7 +8,7 @@
 #-------------------------------------------------------------------------------
 from __future__ import division
 from tkinter import *
-import tkinter.messagebox
+import tkinter.filedialog
 from PIL import Image, ImageTk
 import os
 import glob
@@ -19,7 +19,7 @@ COLORS = ['red', 'blue', 'yellow', 'pink', 'cyan', 'green', 'black']
 # image sizes for the examples
 SIZE = 256, 256
 # regex for graphics file format
-FILES_FORMAT_REGEX = '*.[jp]*[g]'
+FILES_FORMAT_REGEX = '*.[JjPp]*[Gg]'
 
 class LabelTool():
     def __init__(self, master):
@@ -33,6 +33,7 @@ class LabelTool():
         # initialize global state
         self.imageDir = ''
         self.imageList= []
+        self.is_yolo_format = False
         self.egDir = ''
         self.egList = []
         self.outDir = ''
@@ -42,6 +43,7 @@ class LabelTool():
         self.imagename = ''
         self.labelfilename = ''
         self.tkimg = None
+        self.folder = ''
 
         # initialize mouse state
         self.STATE = {}
@@ -61,7 +63,7 @@ class LabelTool():
         self.label.grid(row = 0, column = 0, sticky = E)
         self.entry = Entry(self.frame)
         self.entry.grid(row = 0, column = 1, sticky = W+E)
-        self.ldBtn = Button(self.frame, text = "Load", command = self.loadDir)
+        self.ldBtn = Button(self.frame, text = "Open Folder", command = self.loadDir)
         self.ldBtn.grid(row = 0, column = 2, sticky = W+E)
 
         # main panel for labeling
@@ -121,18 +123,11 @@ class LabelTool():
 ##        self.setImage()
 ##        self.loadDir()
 
-    def loadDir(self, dbg = False):
-        if not dbg:
-            s = self.entry.get()
-            self.parent.focus()
-            self.category = int(s)
-        else:
-            s = r'D:\workspace\python\labelGUI'
-##        if not os.path.isdir(s):
-##            tkMessageBox.showerror("Error!", message = "The specified dir doesn't exist!")
-##            return
+    def loadDir(self):
+        folder = tkinter.filedialog.askdirectory()
+        self.imageDir = folder + '/'
+        
         # get image list
-        self.imageDir = os.path.join(r'./Images', '%03d' %(self.category))
         self.imageList = glob.glob(os.path.join(self.imageDir, FILES_FORMAT_REGEX))
         if len(self.imageList) == 0:
             print('Files .jpg or .png NOT FOUND in the specified dir!')
@@ -143,12 +138,12 @@ class LabelTool():
         self.total = len(self.imageList)
 
          # set up output dir
-        self.outDir = os.path.join(r'./Labels', '%03d' %(self.category))
+        self.outDir = os.path.join(self.imageDir + 'Labels')
         if not os.path.exists(self.outDir):
             os.mkdir(self.outDir)
 
         # load example bboxes
-        self.egDir = os.path.join(r'./Examples', '%03d' %(self.category))
+        self.egDir = os.path.join(r'./Examples')
         if not os.path.exists(self.egDir):
             return
         filelist = glob.glob(os.path.join(self.egDir, FILES_FORMAT_REGEX))
@@ -166,7 +161,7 @@ class LabelTool():
             self.egLabels[i].config(image = self.egList[-1], width = SIZE[0], height = SIZE[1])
 
         self.loadImage()
-        print('%d images loaded from %s' %(self.total, s))
+        print('%d images loaded from %s' %(self.total, self.imageDir))
 
     def loadImage(self):
         # load image
@@ -280,13 +275,21 @@ class LabelTool():
             self.saveImage()
             self.cur = idx
             self.loadImage()
+    
+    #convert func from convert.py Guanghan Ning
+    def convert_to_yolo_format(self,size, box):
+        dw = 1./size[0]
+        dh = 1./size[1]
+        x = (box[0] + box[1])/2.0
+        y = (box[2] + box[3])/2.0
+        w = box[1] - box[0]
+        h = box[3] - box[2]
+        x = x*dw
+        w = w*dw
+        y = y*dh
+        h = h*dh
+        return (x,y,w,h)
 
-##    def setImage(self, imagepath = r'test2.png'):
-##        self.img = Image.open(imagepath)
-##        self.tkimg = ImageTk.PhotoImage(self.img)
-##        self.mainPanel.config(width = self.tkimg.width())
-##        self.mainPanel.config(height = self.tkimg.height())
-##        self.mainPanel.create_image(0, 0, image = self.tkimg, anchor=NW)
 
 if __name__ == '__main__':
     root = Tk()
