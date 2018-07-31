@@ -9,6 +9,7 @@
 from __future__ import division
 from tkinter import *
 import tkinter.filedialog
+import tkinter.messagebox
 from PIL import Image, ImageTk
 import os
 import glob
@@ -29,11 +30,12 @@ class LabelTool():
         self.frame = Frame(self.parent)
         self.frame.pack(fill=BOTH, expand=1)
         self.parent.resizable(width = FALSE, height = FALSE)
+        
 
         # initialize global state
         self.imageDir = ''
         self.imageList= []
-        self.yolo_format = IntVar()
+        self.save_to_yolo_format = IntVar()
         self.egDir = ''
         self.egList = []
         self.outDir = ''
@@ -41,6 +43,7 @@ class LabelTool():
         self.total = 0
         self.category = 0
         self.imagename = ''
+        self.labelname = ''
         self.labelfilename = ''
         self.tkimg = None
         self.folder = ''
@@ -76,7 +79,7 @@ class LabelTool():
         self.parent.bind("a", self.prevImage) # press 'a' to go backforward
         self.parent.bind("d", self.nextImage) # press 'd' to go forward
         self.mainPanel.grid(row = 1, column = 1, rowspan = 4, sticky = W+N)
-        self.checkbox = Checkbutton(self.frame, text = 'YOLO format', onvalue=1, offvalue=0, variable = self.yolo_format)
+        self.checkbox = Checkbutton(self.frame, text = 'save to YOLO format', onvalue=1, offvalue=0, variable = self.save_to_yolo_format)
         self.checkbox.grid(row = 1, column = 3,  sticky = W+N)
 
         # showing bbox info & delete bbox
@@ -168,22 +171,22 @@ class LabelTool():
 
     def loadImage(self):
         # load image
-        basewidth = 400
+        basewidth = 600
         imagepath = self.imageList[self.cur - 1]
         self.img = Image.open(imagepath)
         wpercent = (basewidth/float(self.img.size[0]))
         hsize = int((float(self.img.size[1])*float(wpercent)))
         img = self.img.resize((basewidth,hsize), Image.ANTIALIAS)
         self.tkimg = ImageTk.PhotoImage(img)
-        self.mainPanel.config(width = max(self.tkimg.width(), 400), height = max(self.tkimg.height(), 400))
+        self.mainPanel.config(width = max(self.tkimg.width(), basewidth), height = max(self.tkimg.height(), basewidth))
         self.mainPanel.create_image(0, 0, image = self.tkimg, anchor=NW)
         self.progLabel.config(text = "%04d/%04d" %(self.cur, self.total))
 
         # load labels
         self.clearBBox()
         self.imagename = os.path.split(imagepath)[-1].split('.')[0]
-        labelname = self.imagename + '.txt'
-        self.labelfilename = os.path.join(self.outDir, labelname)
+        self.labelname = self.imagename + '.txt'
+        self.labelfilename = os.path.join(self.outDir, self.labelname)
         bbox_cnt = 0
         if os.path.exists(self.labelfilename):
             with open(self.labelfilename) as f:
@@ -204,16 +207,17 @@ class LabelTool():
 
     def saveImage(self):
         with open(self.labelfilename, 'w') as f:
-            if self.yolo_format.get():
+            if self.save_to_yolo_format.get():
                 s = str(self.cls) + ' '
                 for bbox in self.bboxList:
                     f.write(s + ' '.join(map(str, bbox)) + '\n')
-                    print('Image No. %d saved' %(self.cur))
+                print('Label saved to %s' %(self.labelname))
             else:
                 f.write('%d\n' %len(self.bboxList))
                 for bbox in self.bboxList:
                     f.write(' '.join(map(str, bbox)) + '\n')
-                    print('Image No. %d saved' %(self.cur))
+                print('Label saved to %s' %(self.labelname))
+                
 
 
     def mouseClick(self, event):
@@ -224,7 +228,7 @@ class LabelTool():
             xmin, xmax = min(self.STATE['x'], event.x), max(self.STATE['x'], event.x)
             ymin, ymax = min(self.STATE['y'], event.y), max(self.STATE['y'], event.y)
 
-            if self.yolo_format.get():
+            if self.save_to_yolo_format.get():
                 box = (float(xmin), float(xmax), float(ymin), float(ymax))
                 widht = self.tkimg.width()
                 height = self.tkimg.height()
@@ -291,10 +295,14 @@ class LabelTool():
             self.loadImage()
 
     def nextImage(self, event = None):
-        self.saveImage()
+        self.saveImage()    
         if self.cur < self.total:
             self.cur += 1
             self.loadImage()
+        elif self.cur == self.total:
+            self.create_images_list()           
+            tkinter.messagebox.showinfo("Done","That's All!")
+
 
     def gotoImage(self):
         idx = int(self.idxEntry.get())
@@ -317,6 +325,11 @@ class LabelTool():
         h = h*dh
         return (x,y,w,h)
 
+    def create_images_list(self):
+         with open(self.imageDir + 'images_list.txt', 'w') as inFile:
+             for im in self.imageList:
+                inFile.write(im+'\n')
+             
 
 if __name__ == '__main__':
     root = Tk()
