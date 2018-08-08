@@ -22,7 +22,8 @@ SIZE = 256, 256
 # regex for graphics file format
 FILES_FORMAT_REGEX = '*.[JjPp]*[Gg]'
 
-class LabelTool():
+
+class LabelTool:
     def __init__(self, master):
         # set up the main frame
         self.parent = master
@@ -61,6 +62,7 @@ class LabelTool():
         self.hl = None
         self.vl = None
 
+        
         # ----------------- GUI stuff ---------------------
         # dir entry & load
         self.label = Label(self.frame, text = "Image Dir:")
@@ -79,8 +81,8 @@ class LabelTool():
         self.parent.bind("a", self.prevImage) # press 'a' to go backforward
         self.parent.bind("d", self.nextImage) # press 'd' to go forward
         self.mainPanel.grid(row = 1, column = 1, rowspan = 4, sticky = W+N)
-        self.checkbox = Checkbutton(self.frame, text = 'save to YOLO format', onvalue=1, offvalue=0, variable = self.save_to_yolo_format)
-        self.checkbox.grid(row = 1, column = 3,  sticky = W+N)
+        self.checkbox = Checkbutton(self.frame, text = 'Save to Yolo format', onvalue=1, offvalue=0, variable = self.save_to_yolo_format)
+        self.checkbox.grid(row = 0, column = 3,  sticky = W+N)
 
         # showing bbox info & delete bbox
         self.lb1 = Label(self.frame, text = 'Bounding boxes:')
@@ -124,10 +126,6 @@ class LabelTool():
 
         self.frame.columnconfigure(1, weight = 1)
         self.frame.rowconfigure(4, weight = 1)
-
-        # for debugging
-##        self.setImage()
-##        self.loadDir()
 
     def loadDir(self):
         folder = tkinter.filedialog.askdirectory()
@@ -191,19 +189,39 @@ class LabelTool():
         if os.path.exists(self.labelfilename):
             with open(self.labelfilename) as f:
                 for (i, line) in enumerate(f):
-                    if i == 0:
+                    if i == 0 and len(line.strip()) == 1:
                         bbox_cnt = int(line.strip())
                         continue
-                    tmp = [int(t.strip()) for t in line.split()]
-##                    print tmp
-                    self.bboxList.append(tuple(tmp))
-                    tmpId = self.mainPanel.create_rectangle(tmp[0], tmp[1], \
-                                                            tmp[2], tmp[3], \
-                                                            width = 2, \
-                                                            outline = COLORS[(len(self.bboxList)-1) % len(COLORS)])
-                    self.bboxIdList.append(tmpId)
-                    self.listbox.insert(END, '(%d, %d) -> (%d, %d)' %(tmp[0], tmp[1], tmp[2], tmp[3]))
-                    self.listbox.itemconfig(len(self.bboxIdList) - 1, fg = COLORS[(len(self.bboxIdList) - 1) % len(COLORS)])
+                        # check yolo format annotation
+                    if line[1].isdecimal():
+                        self.save_to_yolo_format.set(0)
+                        tmp = [int(t.strip()) for t in line.split()]
+                        self.bboxList.append(tuple(tmp))
+                        tmpId = self.mainPanel.create_rectangle(tmp[0], tmp[1], \
+                                                                tmp[2], tmp[3], \
+                                                                width=2, \
+                                                                outline=COLORS[(len(self.bboxList) - 1) % len(COLORS)])
+                        self.bboxIdList.append(tmpId)
+                        self.listbox.insert(END, '(%d, %d) -> (%d, %d)' % (tmp[0], tmp[1], tmp[2], tmp[3]))
+                        self.listbox.itemconfig(len(self.bboxIdList) - 1,
+                                                fg=COLORS[(len(self.bboxIdList) - 1) % len(COLORS)])
+
+                    else:
+                        self.save_to_yolo_format.set(1)
+                        bbox_cnt += 1
+                        width = self.tkimg.width()
+                        height = self.tkimg.height()
+                        tmp = [float(t.strip()) for t in line.split()]
+                        tmpAlt = self.convert_from_yolo_format(width, height, tmp)
+                        self.bboxList.append(tmp[1:])
+                        tmpId = self.mainPanel.create_rectangle(tmpAlt[0], tmpAlt[1], \
+                                                                tmpAlt[2], tmpAlt[3], \
+                                                                width=2, \
+                                                                outline=COLORS[(len(self.bboxList) - 1) % len(COLORS)])
+                        self.bboxIdList.append(tmpId)
+                        self.listbox.insert(END, '%.3f, %.3f , %.3f, %.3f' % (tmp[1], tmp[2], tmp[3], tmp[4]))
+                        self.listbox.itemconfig(len(self.bboxIdList) - 1,
+                                                fg=COLORS[(len(self.bboxIdList) - 1) % len(COLORS)])
 
     def saveImage(self):
         with open(self.labelfilename, 'w') as f:
@@ -217,8 +235,6 @@ class LabelTool():
                 for bbox in self.bboxList:
                     f.write(' '.join(map(str, bbox)) + '\n')
                 print('Label saved to %s' %(self.labelname))
-                
-
 
     def mouseClick(self, event):
         if self.STATE['click'] == 0:
@@ -295,13 +311,13 @@ class LabelTool():
             self.loadImage()
 
     def nextImage(self, event = None):
-        self.saveImage()    
+        self.saveImage()
         if self.cur < self.total:
             self.cur += 1
             self.loadImage()
         elif self.cur == self.total:
             self.create_images_list()           
-            tkinter.messagebox.showinfo("Done","That's All!")
+            tkinter.messagebox.showinfo("Done", "That's All!")
 
 
     def gotoImage(self):
@@ -324,6 +340,18 @@ class LabelTool():
         y = y*dh
         h = h*dh
         return (x,y,w,h)
+
+    def convert_from_yolo_format(self,widht_img, height_img, box):
+        bboxW = box[3]*widht_img
+        bboxH = box[4]*height_img
+        centerX = box[1]*widht_img
+        centerY = box[2]*height_img
+        xmin = int(centerX - (bboxW/2))
+        ymin = int(centerY - (bboxH/2))
+        xmax = int(centerX + (bboxW/2))
+        ymax = int(centerY + (bboxH/2))
+        return (xmin,ymin,xmax,ymax)
+
 
     def create_images_list(self):
          with open(self.imageDir + 'images_list.txt', 'w') as inFile:
