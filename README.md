@@ -3,9 +3,11 @@ BBox-Label-Tool
 
 A simple tool for labeling object bounding boxes in images, implemented with Python Tkinter for Python 3.X.
 
+-- For convert label to yolo notation(format), enable the checkbox 'Save to YOLO format'
+**Do not use two formats in one image!**
 
-**Updates:**
-- 2017.5.21 Check out the ```multi-class``` branch for a multi-class version implemented by @jxgu1016
+-- For multi-class task, modify 'class.txt' with your own class-candidates and before labeling bbox, choose the 'Current Class' in the Combobox and make sure you click 'ComfirmClass' button.
+
 
 **Screenshot:**
 ![Label Tool](./screenshot.png)
@@ -31,10 +33,13 @@ $ python main.py
 Usage
 -----
 
-1. Input a folder number (e.g, 1, 2, 5...), and click `Load`. The images in the folder, along with a few example results will be loaded.
+1. Chose a folder click `Open folder`. The images in the folder, along with a few example results will be loaded.
 2. To create a new bounding box, left-click to select the first vertex. Moving the mouse to draw a rectangle, and left-click again to select the second vertex.
   - To cancel the bounding box while drawing, just press `<Esc>`.
   - To delete a existing bounding box, select it from the listbox, and click `Delete`.
   - To delete all existing bounding boxes in the image, simply click `ClearAll`.
 3. After finishing one image, click `Next` to advance. Likewise, click `Prev` to reverse. Or, input an image id and click `Go` to navigate to the speficied image.
   - Be sure to click `Next` after finishing a image, or the result won't be saved. 
+4. If you want to convert label to yolo notation(format), enable the checkbox 'Save to YOLO format'
+**Do not use two formats in one image!**
+5. For multi-class task, modify 'class.txt' with your own class-candidates and before labeling bbox, choose the 'Current Class' in the Combobox and make sure you click 'ComfirmClass' button.
