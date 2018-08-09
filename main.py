@@ -1,22 +1,15 @@
-#-------------------------------------------------------------------------------
-# Name:        Object bounding box label tool
-# Purpose:     Label object bboxes for ImageNet Detection data
-# Author:      Qiushi
-# Created:     06/06/2014
-
-#
-#-------------------------------------------------------------------------------
 from __future__ import division
 from tkinter import *
-import tkinter.filedialog
-import tkinter.messagebox
+from tkinter import filedialog
+from tkinter import messagebox
+from tkinter import ttk
 from PIL import Image, ImageTk
 import os
 import glob
 import random
 
 # colors for the bboxes
-COLORS = ['red', 'blue', 'yellow', 'pink', 'cyan', 'green', 'black']
+COLORS = ['red', 'blue', 'purple', 'grey', 'cyan', 'green', 'black']
 # image sizes for the examples
 SIZE = 256, 256
 # regex for graphics file format
@@ -30,7 +23,7 @@ class LabelTool:
         self.parent.title("LabelTool")
         self.frame = Frame(self.parent)
         self.frame.pack(fill=BOTH, expand=1)
-        self.parent.resizable(width = FALSE, height = FALSE)
+        self.parent.resizable(width=FALSE, height=FALSE)
         
 
         # initialize global state
@@ -48,6 +41,9 @@ class LabelTool:
         self.labelfilename = ''
         self.tkimg = None
         self.folder = ''
+        self.currentLabelclass = ''
+        self.cla_can_temp = []
+        self.classcandidate_filename = 'class.txt'
         self.cls = 0
 
         # initialize mouse state
@@ -65,12 +61,12 @@ class LabelTool:
         
         # ----------------- GUI stuff ---------------------
         # dir entry & load
-        self.label = Label(self.frame, text = "Image Dir:")
-        self.label.grid(row = 0, column = 0, sticky = E)
+        self.label = Label(self.frame, text="Image Dir:")
+        self.label.grid(row=0, column=0, sticky=E)
         self.entry = Entry(self.frame)
-        self.entry.grid(row = 0, column = 1, sticky = W+E)
-        self.ldBtn = Button(self.frame, text = "Open Folder", command = self.loadDir)
-        self.ldBtn.grid(row = 0, column = 2, sticky = W+E)
+        self.entry.grid(row=0, column=1, sticky=W+E)
+        self.ldBtn = Button(self.frame, text="Open Folder", command=self.loadDir)
+        self.ldBtn.grid(row=0, column=2, sticky=W+E)
 
         # main panel for labeling
         self.mainPanel = Canvas(self.frame, cursor='tcross')
@@ -80,23 +76,40 @@ class LabelTool:
         self.parent.bind("s", self.cancelBBox)
         self.parent.bind("a", self.prevImage) # press 'a' to go backforward
         self.parent.bind("d", self.nextImage) # press 'd' to go forward
-        self.mainPanel.grid(row = 1, column = 1, rowspan = 4, sticky = W+N)
+        self.mainPanel.grid(row = 1, column= 1, rowspan = 4, sticky = W+N)
         self.checkbox = Checkbutton(self.frame, text = 'Save to Yolo format', onvalue=1, offvalue=0, variable = self.save_to_yolo_format)
         self.checkbox.grid(row = 0, column = 3,  sticky = W+N)
 
+        # choose class
+        self.classname = StringVar()
+        self.classcandidate = ttk.Combobox(self.frame, state='readonly', textvariable=self.classname)
+        self.classcandidate.grid(row=1, column=2)
+        if os.path.exists(self.classcandidate_filename):
+            with open(self.classcandidate_filename) as cf:
+                for line in cf.readlines():
+                    # print line
+                    self.cla_can_temp.append(line.strip('\n'))
+        # print self.cla_can_temp
+        self.classcandidate['values'] = self.cla_can_temp
+        self.classcandidate.current(0)
+        self.currentLabelclass = self.classcandidate.get()  # init
+        self.btnclass = Button(self.frame, text='ComfirmClass', command=self.setClass)
+        self.btnclass.grid(row=2, column=2, sticky=W + E)
+
+
         # showing bbox info & delete bbox
         self.lb1 = Label(self.frame, text = 'Bounding boxes:')
-        self.lb1.grid(row = 1, column = 2,  sticky = W+N)
-        self.listbox = Listbox(self.frame, width = 22, height = 12)
-        self.listbox.grid(row = 2, column = 2, sticky = N)
+        self.lb1.grid(row = 3, column = 2,  sticky = W+N)
+        self.listbox = Listbox(self.frame, width = 26, height = 20 )
+        self.listbox.grid(row = 4, column = 2, sticky = N)
         self.btnDel = Button(self.frame, text = 'Delete', command = self.delBBox)
-        self.btnDel.grid(row = 3, column = 2, sticky = W+E+N)
+        self.btnDel.grid(row = 5, column = 2, sticky = W+E+N)
         self.btnClear = Button(self.frame, text = 'ClearAll', command = self.clearBBox)
-        self.btnClear.grid(row = 4, column = 2, sticky = W+E+N)
+        self.btnClear.grid(row = 6, column = 2, sticky = W+E+N)
 
         # control panel for image navigation
         self.ctrPanel = Frame(self.frame)
-        self.ctrPanel.grid(row = 5, column = 1, columnspan = 2, sticky = W+E)
+        self.ctrPanel.grid(row = 7, column = 1, columnspan = 2, sticky = W+E)
         self.prevBtn = Button(self.ctrPanel, text='<< Prev', width = 10, command = self.prevImage)
         self.prevBtn.pack(side = LEFT, padx = 5, pady = 3)
         self.nextBtn = Button(self.ctrPanel, text='Next >>', width = 10, command = self.nextImage)
@@ -128,7 +141,7 @@ class LabelTool:
         self.frame.rowconfigure(4, weight = 1)
 
     def loadDir(self):
-        folder = tkinter.filedialog.askdirectory()
+        folder = filedialog.askdirectory()
         self.imageDir = folder + '/'
         
         # get image list
@@ -195,40 +208,41 @@ class LabelTool:
                         # check yolo format annotation
                     if line[1].isdecimal():
                         self.save_to_yolo_format.set(0)
-                        tmp = [int(t.strip()) for t in line.split()]
+                        tmp = line.split()
                         self.bboxList.append(tuple(tmp))
-                        tmpId = self.mainPanel.create_rectangle(tmp[0], tmp[1], \
-                                                                tmp[2], tmp[3], \
+                        tmp_id = self.mainPanel.create_rectangle(int(tmp[0]), int(tmp[1]), \
+                                                                int(tmp[2]), int(tmp[3]), \
                                                                 width=2, \
                                                                 outline=COLORS[(len(self.bboxList) - 1) % len(COLORS)])
-                        self.bboxIdList.append(tmpId)
-                        self.listbox.insert(END, '(%d, %d) -> (%d, %d)' % (tmp[0], tmp[1], tmp[2], tmp[3]))
+                        self.bboxIdList.append(tmp_id)
+                        self.listbox.insert(END, '%s: (%d, %d) -> (%d, %d)' %(tmp[4], int(tmp[0]), int(tmp[1]),
+                                                                           int(tmp[2]), int(tmp[3])))
                         self.listbox.itemconfig(len(self.bboxIdList) - 1,
                                                 fg=COLORS[(len(self.bboxIdList) - 1) % len(COLORS)])
 
                     else:
                         self.save_to_yolo_format.set(1)
-                        bbox_cnt += 1
                         width = self.tkimg.width()
                         height = self.tkimg.height()
-                        tmp = [float(t.strip()) for t in line.split()]
-                        tmpAlt = self.convert_from_yolo_format(width, height, tmp)
-                        self.bboxList.append(tmp[1:])
-                        tmpId = self.mainPanel.create_rectangle(tmpAlt[0], tmpAlt[1], \
-                                                                tmpAlt[2], tmpAlt[3], \
+                        tmp = line.split()
+                        tmp_alt = self.convert_from_yolo_format(width, height, tmp)
+                        cls = self.cla_can_temp[int(tmp[0])]
+                        self.bboxList.append(tmp)
+                        tmp_id = self.mainPanel.create_rectangle(tmp_alt[0], tmp_alt[1], \
+                                                                tmp_alt[2], tmp_alt[3], \
                                                                 width=2, \
                                                                 outline=COLORS[(len(self.bboxList) - 1) % len(COLORS)])
-                        self.bboxIdList.append(tmpId)
-                        self.listbox.insert(END, '%.3f, %.3f , %.3f, %.3f' % (tmp[1], tmp[2], tmp[3], tmp[4]))
+                        self.bboxIdList.append(tmp_id)
+                        self.listbox.insert(END, '%s: %.3f, %.3f , %.3f, %.3f' % (cls, float(tmp[1]), float(tmp[2]),
+                                                                                  float(tmp[3]), float(tmp[4])))
                         self.listbox.itemconfig(len(self.bboxIdList) - 1,
                                                 fg=COLORS[(len(self.bboxIdList) - 1) % len(COLORS)])
 
     def saveImage(self):
         with open(self.labelfilename, 'w') as f:
             if self.save_to_yolo_format.get():
-                s = str(self.cls) + ' '
                 for bbox in self.bboxList:
-                    f.write(s + ' '.join(map(str, bbox)) + '\n')
+                    f.write(' '.join(map(str, bbox)) + '\n')
                 print('Label saved to %s' %(self.labelname))
             else:
                 f.write('%d\n' %len(self.bboxList))
@@ -248,17 +262,18 @@ class LabelTool:
                 box = (float(xmin), float(xmax), float(ymin), float(ymax))
                 widht = self.tkimg.width()
                 height = self.tkimg.height()
+                ind = str(self.cla_can_temp.index(self.currentLabelclass))
                 c = self.convert_to_yolo_format(widht,height,box)
-                self.bboxList.append(c)
+                self.bboxList.append((ind,*c))
                 self.bboxIdList.append(self.bboxId)
                 self.bboxId = None
-                self.listbox.insert(END, '%.3f, %.3f , %.3f, %.3f'%(c))
+                self.listbox.insert(END, '%s: %.3f, %.3f , %.3f, %.3f' %(self.currentLabelclass, *c))
                 self.listbox.itemconfig(len(self.bboxIdList) - 1, fg = COLORS[(len(self.bboxIdList) - 1) % len(COLORS)])
             else:
-                self.bboxList.append((xmin, ymin, xmax, ymax))
+                self.bboxList.append((xmin, ymin, xmax, ymax, self.currentLabelclass))
                 self.bboxIdList.append(self.bboxId)
                 self.bboxId = None
-                self.listbox.insert(END, '(%d, %d) -> (%d, %d)' %(xmin, ymin, xmax, ymax))
+                self.listbox.insert(END, '%s: (%d, %d) -> (%d, %d)' %(self.currentLabelclass,xmin, ymin, xmax, ymax))
                 self.listbox.itemconfig(len(self.bboxIdList) - 1, fg = COLORS[(len(self.bboxIdList) - 1) % len(COLORS)])
         
         self.STATE['click'] = 1 - self.STATE['click']
@@ -317,7 +332,7 @@ class LabelTool:
             self.loadImage()
         elif self.cur == self.total:
             self.create_images_list()           
-            tkinter.messagebox.showinfo("Done", "That's All!")
+            messagebox.showinfo("Done", "That's All!")
 
 
     def gotoImage(self):
@@ -326,7 +341,11 @@ class LabelTool:
             self.saveImage()
             self.cur = idx
             self.loadImage()
-    
+
+    def setClass(self):
+        self.currentLabelclass = self.classcandidate.get()
+        print('set label class to : %s', self.currentLabelclass)
+
     #convert func from convert.py Guanghan Ning
     def convert_to_yolo_format(self,widht_img, height_img, box):
         dw = 1./widht_img
@@ -342,10 +361,10 @@ class LabelTool:
         return (x,y,w,h)
 
     def convert_from_yolo_format(self,widht_img, height_img, box):
-        bboxW = box[3]*widht_img
-        bboxH = box[4]*height_img
-        centerX = box[1]*widht_img
-        centerY = box[2]*height_img
+        bboxW = float(box[3])*widht_img
+        bboxH = float(box[4])*height_img
+        centerX = float(box[1])*widht_img
+        centerY = float(box[2])*height_img
         xmin = int(centerX - (bboxW/2))
         ymin = int(centerY - (bboxH/2))
         xmax = int(centerX + (bboxW/2))
