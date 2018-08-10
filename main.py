@@ -23,13 +23,14 @@ class LabelTool:
         self.parent.title("LabelTool")
         self.frame = Frame(self.parent)
         self.frame.pack(fill=BOTH, expand=1)
-        self.parent.resizable(width=FALSE, height=FALSE)
+        self.parent.resizable(width=False, height=False)
         
 
         # initialize global state
         self.imageDir = ''
         self.imageList= []
         self.save_to_yolo_format = IntVar()
+        self.entry_text = StringVar()
         self.egDir = ''
         self.egList = []
         self.outDir = ''
@@ -63,7 +64,7 @@ class LabelTool:
         # dir entry & load
         self.label = Label(self.frame, text="Image Dir:")
         self.label.grid(row=0, column=0, sticky=E)
-        self.entry = Entry(self.frame)
+        self.entry = Entry(self.frame, textvariable=self.entry_text)
         self.entry.grid(row=0, column=1, sticky=W+E)
         self.ldBtn = Button(self.frame, text="Open Folder", command=self.loadDir)
         self.ldBtn.grid(row=0, column=2, sticky=W+E)
@@ -79,6 +80,14 @@ class LabelTool:
         self.mainPanel.grid(row = 1, column= 1, rowspan = 4, sticky = W+N)
         self.checkbox = Checkbutton(self.frame, text = 'Save to Yolo format', onvalue=1, offvalue=0, variable = self.save_to_yolo_format)
         self.checkbox.grid(row = 0, column = 3,  sticky = W+N)
+        self.info_box_ctr_panel = Frame(self.frame)
+        self.info_box_ctr_panel.grid(row=5, column=1, sticky=W + E)
+        self.info_box = Text(self.info_box_ctr_panel, height=4)
+        self.info_box.pack(side=LEFT, fill=Y)
+        self.scroll_info_box = Scrollbar(self.info_box_ctr_panel)
+        self.scroll_info_box.pack(side=LEFT, fill=Y)
+        self.scroll_info_box.config(command=self.info_box.yview)
+        self.info_box.config(yscrollcommand=self.scroll_info_box.set)
 
         # choose class
         self.classname = StringVar()
@@ -123,6 +132,8 @@ class LabelTool:
         self.goBtn = Button(self.ctrPanel, text = 'Go', command = self.gotoImage)
         self.goBtn.pack(side = LEFT)
 
+
+
         # example pannel for illustration
         self.egPanel = Frame(self.frame, border = 10)
         self.egPanel.grid(row = 1, column = 0, rowspan = 5, sticky = N)
@@ -142,17 +153,18 @@ class LabelTool:
 
     def loadDir(self):
         folder = filedialog.askdirectory()
-        self.imageDir = folder + '/'
-        
+        self.imageDir = folder + os.sep
+        self.entry_text.set(self.imageDir)
         # get image list
         self.imageList = glob.glob(os.path.join(self.imageDir, FILES_FORMAT_REGEX))
         if len(self.imageList) == 0:
-            print('Files .jpg or .png NOT FOUND in the specified dir!')
+            self.info_box.insert(END,'Files .jpg or .png NOT FOUND in the specified dir!\n')
             return
 
         # default to the 1st image in the collection
         self.cur = 1
         self.total = len(self.imageList)
+
 
          # set up output dir
         self.outDir = os.path.join(self.imageDir + 'Labels')
@@ -178,12 +190,13 @@ class LabelTool:
             self.egLabels[i].config(image = self.egList[-1], width = SIZE[0], height = SIZE[1])
 
         self.loadImage()
-        print('%d images loaded from %s' %(self.total, self.imageDir))
+        self.info_box.insert(END,'%d images loaded from %s \n' %(self.total, self.imageDir))
 
     def loadImage(self):
         # load image
         basewidth = 600
         imagepath = self.imageList[self.cur - 1]
+        self.entry_text.set(imagepath)
         self.img = Image.open(imagepath)
         wpercent = (basewidth/float(self.img.size[0]))
         hsize = int((float(self.img.size[1])*float(wpercent)))
@@ -243,12 +256,12 @@ class LabelTool:
             if self.save_to_yolo_format.get():
                 for bbox in self.bboxList:
                     f.write(' '.join(map(str, bbox)) + '\n')
-                print('Label saved to %s' %(self.labelname))
+                self.info_box.insert(END,'Label saved to %s \n' %(self.labelname))
             else:
                 f.write('%d\n' %len(self.bboxList))
                 for bbox in self.bboxList:
                     f.write(' '.join(map(str, bbox)) + '\n')
-                print('Label saved to %s' %(self.labelname))
+                self.info_box.insert(END,'Label saved to %s \n' %(self.labelname))
 
     def mouseClick(self, event):
         if self.STATE['click'] == 0:
