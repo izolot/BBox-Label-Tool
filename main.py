@@ -38,8 +38,10 @@ class LabelTool:
         self.total = 0
         self.category = 0
         self.imagename = ''
+        self.imagepath = ''
         self.labelname = ''
         self.labelfilename = ''
+        self.file_will_not_remove = True
         self.tkimg = None
         self.folder = ''
         self.currentLabelclass = ''
@@ -68,6 +70,7 @@ class LabelTool:
         self.entry.grid(row=0, column=1, sticky=W+E)
         self.ldBtn = Button(self.frame, text="Open Folder", command=self.loadDir)
         self.ldBtn.grid(row=0, column=2, sticky=W+E)
+
 
         # main panel for labeling
         self.mainPanel = Canvas(self.frame, cursor='tcross')
@@ -131,6 +134,8 @@ class LabelTool:
         self.idxEntry.pack(side = LEFT)
         self.goBtn = Button(self.ctrPanel, text = 'Go', command = self.gotoImage)
         self.goBtn.pack(side = LEFT)
+        self.btnRm = Button(self.ctrPanel, text='Remove', command=self.delete_image)
+        self.btnRm.pack(side = LEFT, padx = 5, pady = 3)
 
 
 
@@ -158,7 +163,7 @@ class LabelTool:
         # get image list
         self.imageList = glob.glob(os.path.join(self.imageDir, FILES_FORMAT_REGEX))
         if len(self.imageList) == 0:
-            self.info_box.insert(END,'Files .jpg or .png NOT FOUND in the specified dir!\n')
+            self.print_log('Files .jpg or .png NOT FOUND in the specified dir!')
             return
 
         # default to the 1st image in the collection
@@ -188,16 +193,15 @@ class LabelTool:
             self.tmp.append(im.resize(new_size, Image.ANTIALIAS))
             self.egList.append(ImageTk.PhotoImage(self.tmp[-1]))
             self.egLabels[i].config(image = self.egList[-1], width = SIZE[0], height = SIZE[1])
-
         self.loadImage()
-        self.info_box.insert(END,'%d images loaded from %s \n' %(self.total, self.imageDir))
+        self.print_log(str(self.total) + ' images loaded from ' + self.imageDir)
 
     def loadImage(self):
         # load image
         basewidth = 600
-        imagepath = self.imageList[self.cur - 1]
-        self.entry_text.set(imagepath)
-        self.img = Image.open(imagepath)
+        self.imagepath = self.imageList[self.cur - 1]
+        self.entry_text.set(self.imagepath)
+        self.img = Image.open(self.imagepath)
         wpercent = (basewidth/float(self.img.size[0]))
         hsize = int((float(self.img.size[1])*float(wpercent)))
         img = self.img.resize((basewidth,hsize), Image.ANTIALIAS)
@@ -208,7 +212,7 @@ class LabelTool:
 
         # load labels
         self.clearBBox()
-        self.imagename = os.path.split(imagepath)[-1].split('.')[0]
+        self.imagename = os.path.split(self.imagepath)[-1].split('.')[0]
         self.labelname = self.imagename + '.txt'
         self.labelfilename = os.path.join(self.outDir, self.labelname)
         bbox_cnt = 0
@@ -252,16 +256,16 @@ class LabelTool:
                                                 fg=COLORS[(len(self.bboxIdList) - 1) % len(COLORS)])
 
     def saveImage(self):
-        with open(self.labelfilename, 'w') as f:
-            if self.save_to_yolo_format.get():
-                for bbox in self.bboxList:
-                    f.write(' '.join(map(str, bbox)) + '\n')
-                self.info_box.insert(END,'Label saved to %s \n' %(self.labelname))
-            else:
-                f.write('%d\n' %len(self.bboxList))
-                for bbox in self.bboxList:
-                    f.write(' '.join(map(str, bbox)) + '\n')
-                self.info_box.insert(END,'Label saved to %s \n' %(self.labelname))
+        if self.file_will_not_remove:
+            with open(self.labelfilename, 'w') as f:
+                if self.save_to_yolo_format.get():
+                    for bbox in self.bboxList:
+                        f.write(' '.join(map(str, bbox)) + '\n')
+                else:
+                    f.write('%d\n' %len(self.bboxList))
+                    for bbox in self.bboxList:
+                        f.write(' '.join(map(str, bbox)) + '\n')
+            self.print_log('Label saved to ' + self.labelname)
 
     def mouseClick(self, event):
         if self.STATE['click'] == 0:
@@ -325,6 +329,7 @@ class LabelTool:
         self.bboxList.pop(idx)
         self.listbox.delete(idx)
 
+
     def clearBBox(self):
         for idx in range(len(self.bboxIdList)):
             self.mainPanel.delete(self.bboxIdList[idx])
@@ -334,18 +339,35 @@ class LabelTool:
 
     def prevImage(self, event = None):
         self.saveImage()
+        self.file_will_not_remove = True
         if self.cur > 1:
             self.cur -= 1
             self.loadImage()
 
     def nextImage(self, event = None):
         self.saveImage()
+        self.file_will_not_remove = True
         if self.cur < self.total:
             self.cur += 1
             self.loadImage()
         elif self.cur == self.total:
             self.create_images_list()           
             messagebox.showinfo("Done", "That's All!")
+
+    #remove picture
+    def delete_image(self):
+        if messagebox.askyesno("Remove picture", "Are you sure?"):
+            if self.imagepath == '':
+               self.print_log('--Folder path is empty--')
+            else:
+                os.remove(self.imagepath)
+                os.remove(self.labelfilename)
+                self.file_will_not_remove = False
+                del self.imageList[self.cur - 1]
+                self.nextImage()
+                self.print_log('Remove pictures ' + os.path.split(self.imagepath)[-1])
+                self.print_log('Remove ' + self.labelfilename)
+                
 
 
     def gotoImage(self):
@@ -355,6 +377,9 @@ class LabelTool:
             self.cur = idx
             self.loadImage()
 
+    def print_log(self, msg):
+        self.info_box.insert(END, msg + '\n')
+    
     def setClass(self):
         self.currentLabelclass = self.classcandidate.get()
         print('set label class to : %s', self.currentLabelclass)
@@ -394,5 +419,5 @@ class LabelTool:
 if __name__ == '__main__':
     root = Tk()
     tool = LabelTool(root)
-    root.resizable(width =  True, height = True)
+    root.resizable(width = True, height = True)
     root.mainloop()
