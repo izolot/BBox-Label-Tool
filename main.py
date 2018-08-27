@@ -134,8 +134,8 @@ class LabelTool:
         self.idxEntry.pack(side = LEFT)
         self.goBtn = Button(self.ctrPanel, text = 'Go', command = self.gotoImage)
         self.goBtn.pack(side = LEFT)
-        self.btnRm = Button(self.ctrPanel, text='Remove', command=self.delete_image)
-        self.btnRm.pack(side = LEFT, padx = 5, pady = 3)
+        self.btnRm = Button(self.ctrPanel, text='Remove Picture', command=self.delete_image)
+        self.btnRm.pack(side = LEFT, padx = 25, pady = 3)
 
 
 
@@ -364,9 +364,15 @@ class LabelTool:
                 os.remove(self.labelfilename)
                 self.file_will_not_remove = False
                 del self.imageList[self.cur - 1]
-                self.nextImage()
+                self.total -= 1
                 self.print_log('Remove pictures ' + os.path.split(self.imagepath)[-1])
                 self.print_log('Remove ' + self.labelfilename)
+                if self.cur < self.total:
+                    self.loadImage()
+                elif self.cur - 1 == self.total:
+                    self.cur -= 1
+                    self.loadImage()   
+                
                 
 
 
