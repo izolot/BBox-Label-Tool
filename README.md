@@ -12,15 +12,6 @@ A simple tool for labeling object bounding boxes in images, implemented with Pyt
 **Screenshot:**
 ![Label Tool](./screenshot.png)
 
-Data Organization
------------------
-LabelTool  
-|  
-|--main.py   *# source code for the tool*  
-|  
-|  
-|--Examples/  *# direcotry for the example bboxes*  
-
 Environment
 ----------
 - python 3.X
