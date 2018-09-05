@@ -134,7 +134,7 @@ class LabelTool:
         self.idxEntry.pack(side = LEFT)
         self.goBtn = Button(self.ctrPanel, text = 'Go', command = self.gotoImage)
         self.goBtn.pack(side = LEFT)
-        self.btnRm = Button(self.ctrPanel, text='Remove Picture', command=self.delete_image)
+        self.btnRm = Button(self.ctrPanel, text='Remove Picture', command=self.remove_image)
         self.btnRm.pack(side = LEFT, padx = 25, pady = 3)
 
 
@@ -355,18 +355,19 @@ class LabelTool:
             messagebox.showinfo("Done", "That's All!")
 
     #remove picture
-    def delete_image(self):
+    def remove_image(self):
         if messagebox.askyesno("Remove picture", "Are you sure?"):
             if self.imagepath == '':
                self.print_log('--Folder path is empty--')
             else:
+                index = self.imageList.index(self.imagepath)
                 os.remove(self.imagepath)
-                os.remove(self.labelfilename)
+                if os.path.exists(self.labelfilename):
+                    os.remove(self.labelfilename)
                 self.file_will_not_remove = False
-                del self.imageList[self.cur - 1]
+                del self.imageList[index]
                 self.total -= 1
-                self.print_log('Remove pictures ' + os.path.split(self.imagepath)[-1])
-                self.print_log('Remove ' + self.labelfilename)
+                self.print_log('Remove ' + os.path.split(self.imagepath)[-1])
                 if self.cur < self.total:
                     self.loadImage()
                 elif self.cur - 1 == self.total:
