@@ -93,9 +93,11 @@ class LabelTool:
         self.info_box.config(yscrollcommand=self.scroll_info_box.set)
 
         # choose class
-        self.classname = StringVar()
-        self.classcandidate = ttk.Combobox(self.frame, state='readonly', textvariable=self.classname)
-        self.classcandidate.grid(row=1, column=2)
+        self.classname_label = Label(self.frame, text = 'Chose classname')
+        self.classname_label.grid(row=1,column =2)
+        self.classcandidate = ttk.Combobox(self.frame, state='readonly')
+        self.classcandidate.grid(row=2, column=2)
+        self.classcandidate.current(0)
         if os.path.exists(self.classcandidate_filename):
             with open(self.classcandidate_filename) as cf:
                 for line in cf.readlines():
@@ -103,16 +105,15 @@ class LabelTool:
                     self.cla_can_temp.append(line.strip('\n'))
         # print self.cla_can_temp
         self.classcandidate['values'] = self.cla_can_temp
-        self.classcandidate.current(0)
-        self.currentLabelclass = self.classcandidate.get()  # init
-        self.btnclass = Button(self.frame, text='ComfirmClass', command=self.setClass)
-        self.btnclass.grid(row=2, column=2, sticky=W + E)
+        self.classcandidate.bind("<<ComboboxSelected>>", self.setClass)
+        # self.btnclass = Button(self.frame, text='ComfirmClass', command=self.setClass)
+        # self.btnclass.grid(row=2, column=2, sticky=W + E)
 
 
         # showing bbox info & delete bbox
         self.lb1 = Label(self.frame, text = 'Bounding boxes:')
         self.lb1.grid(row = 3, column = 2,  sticky = W+N)
-        self.listbox = Listbox(self.frame, width = 26, height = 20 )
+        self.listbox = Listbox(self.frame, width = 26, height = 20)
         self.listbox.grid(row = 4, column = 2, sticky = N)
         self.btnDel = Button(self.frame, text = 'Delete', command = self.delBBox)
         self.btnDel.grid(row = 5, column = 2, sticky = W+E+N)
@@ -136,7 +137,7 @@ class LabelTool:
         self.goBtn.pack(side = LEFT)
         self.btnRm = Button(self.ctrPanel, text='Remove Picture', command=self.remove_image)
         self.btnRm.pack(side = LEFT, padx = 25, pady = 3)
-
+     
 
 
         # example pannel for illustration
@@ -170,12 +171,7 @@ class LabelTool:
         self.cur = 1
         self.total = len(self.imageList)
 
-
-         # set up output dir
-        self.outDir = os.path.join(self.imageDir + 'Labels')
-        if not os.path.exists(self.outDir):
-            os.mkdir(self.outDir)
-
+         
         # load example bboxes
         self.egDir = os.path.join(r'./Examples')
         if not os.path.exists(self.egDir):
@@ -198,7 +194,7 @@ class LabelTool:
 
     def loadImage(self):
         # load image
-        basewidth = 600
+        basewidth = 900
         self.imagepath = self.imageList[self.cur - 1]
         self.entry_text.set(self.imagepath)
         self.img = Image.open(self.imagepath)
@@ -214,7 +210,7 @@ class LabelTool:
         self.clearBBox()
         self.imagename = os.path.split(self.imagepath)[-1].split('.')[0]
         self.labelname = self.imagename + '.txt'
-        self.labelfilename = os.path.join(self.outDir, self.labelname)
+        self.labelfilename = os.path.join(self.imageDir, self.labelname)
         bbox_cnt = 0
         if os.path.exists(self.labelfilename):
             with open(self.labelfilename) as f:
@@ -387,7 +383,8 @@ class LabelTool:
     def print_log(self, msg):
         self.info_box.insert(END, msg + '\n')
     
-    def setClass(self):
+    
+    def setClass(self, event):
         self.currentLabelclass = self.classcandidate.get()
         print('set label class to : %s', self.currentLabelclass)
 
@@ -405,6 +402,7 @@ class LabelTool:
         h = h*dh
         return (x,y,w,h)
 
+    #TODO save file to xml format for VOC    
     def convert_from_yolo_format(self,widht_img, height_img, box):
         bboxW = float(box[3])*widht_img
         bboxH = float(box[4])*height_img
