@@ -97,7 +97,6 @@ class LabelTool:
         self.classname_label.grid(row=1,column =2)
         self.classcandidate = ttk.Combobox(self.frame, state='readonly')
         self.classcandidate.grid(row=2, column=2)
-        self.classcandidate.current(0)
         if os.path.exists(self.classcandidate_filename):
             with open(self.classcandidate_filename) as cf:
                 for line in cf.readlines():
