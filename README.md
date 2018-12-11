@@ -1,9 +1,11 @@
+Now Bbox saves to YOLO format by default
+
 BBox-Label-Tool
 ===============
 
 A simple tool for labeling object bounding boxes in images, implemented with Python Tkinter for Python 3.X.
 
--- For convert label to yolo notation(format), enable the checkbox 'Save to YOLO format'
+-- For convert label to VOC notation(format), diselect the checkbox 'Save to YOLO format'
 **Do not use two formats in one image!**
 
 -- For multi-class task, modify 'class.txt' with your own class-candidates and before labeling bbox, choose the 'Current Class' in the Combobox and make sure you click 'ComfirmClass' button.
