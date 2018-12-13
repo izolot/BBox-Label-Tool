@@ -82,6 +82,7 @@ class LabelTool:
         self.parent.bind("d", self.nextImage) # press 'd' to go forward
         self.mainPanel.grid(row = 1, column= 1, rowspan = 4, sticky = W+N)
         self.checkbox = Checkbutton(self.frame, text = 'Save to Yolo format', onvalue=1, offvalue=0, variable = self.save_to_yolo_format)
+        self.checkbox.select()
         self.checkbox.grid(row = 0, column = 3,  sticky = W+N)
         self.info_box_ctr_panel = Frame(self.frame)
         self.info_box_ctr_panel.grid(row=5, column=1, sticky=W + E)
@@ -145,9 +146,8 @@ class LabelTool:
         self.tmpLabel2 = Label(self.egPanel, text = "Examples:")
         self.tmpLabel2.pack(side = TOP, pady = 5)
         self.egLabels = []
-        for i in range(3):
-            self.egLabels.append(Label(self.egPanel))
-            self.egLabels[-1].pack(side = TOP)
+        
+            
 
         # display mouse position
         self.disp = Label(self.ctrPanel, text='')
@@ -172,14 +172,9 @@ class LabelTool:
 
          
         # load example bboxes
-        self.egDir = os.path.join(r'./Examples')
-        if not os.path.exists(self.egDir):
-            return
-        filelist = glob.glob(os.path.join(self.egDir, FILES_FORMAT_REGEX))
         self.tmp = []
         self.egList = []
-        random.shuffle(filelist)
-        for (i, f) in enumerate(filelist):
+        for (i, f) in enumerate(self.imageList):
             if i == 3:
                 break
             im = Image.open(f)
@@ -187,7 +182,9 @@ class LabelTool:
             new_size = int(r * im.size[0]), int(r * im.size[1])
             self.tmp.append(im.resize(new_size, Image.ANTIALIAS))
             self.egList.append(ImageTk.PhotoImage(self.tmp[-1]))
-            self.egLabels[i].config(image = self.egList[-1], width = SIZE[0], height = SIZE[1])
+            self.egLabels.append(Button(self.egPanel))
+            self.egLabels[-1].pack(side = TOP)
+            self.egLabels[i].config(image = self.egList[-1], width = SIZE[0], height = SIZE[1], command=self.gotoImage)
         self.loadImage()
         self.print_log(str(self.total) + ' images loaded from ' + self.imageDir)
 
@@ -250,6 +247,9 @@ class LabelTool:
                         self.listbox.itemconfig(len(self.bboxIdList) - 1,
                                                 fg=COLORS[(len(self.bboxIdList) - 1) % len(COLORS)])
 
+    
+    
+    
     def saveImage(self):
         if self.file_will_not_remove:
             with open(self.labelfilename, 'w') as f:
@@ -369,9 +369,6 @@ class LabelTool:
                     self.cur -= 1
                     self.loadImage()   
                 
-                
-
-
     def gotoImage(self):
         idx = int(self.idxEntry.get())
         if 1 <= idx and idx <= self.total:
