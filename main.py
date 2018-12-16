@@ -133,7 +133,7 @@ class LabelTool:
         self.tmpLabel.pack(side = LEFT, padx = 5)
         self.idxEntry = Entry(self.ctrPanel, width = 5)
         self.idxEntry.pack(side = LEFT)
-        self.goBtn = Button(self.ctrPanel, text = 'Go', command = self.gotoImage)
+        self.goBtn = Button(self.ctrPanel, text = 'Go', command = self.gotoIndex)
         self.goBtn.pack(side = LEFT)
         self.btnRm = Button(self.ctrPanel, text='Remove Picture', command=self.remove_image)
         self.btnRm.pack(side = LEFT, padx = 25, pady = 3)
@@ -184,7 +184,7 @@ class LabelTool:
             self.egList.append(ImageTk.PhotoImage(self.tmp[-1]))
             self.egLabels.append(Button(self.egPanel))
             self.egLabels[-1].pack(side = TOP)
-            self.egLabels[i].config(image = self.egList[-1], width = SIZE[0], height = SIZE[1], command=self.gotoImage)
+            self.egLabels[i].config(image = self.egList[-1], width = SIZE[0], height = SIZE[1], command=lambda x=f: self.gotoImage(x))
         self.loadImage()
         self.print_log(str(self.total) + ' images loaded from ' + self.imageDir)
 
@@ -369,7 +369,16 @@ class LabelTool:
                     self.cur -= 1
                     self.loadImage()   
                 
-    def gotoImage(self):
+    
+    def gotoImage(self, image):
+        index = self.imageList.index(image)
+        self.saveImage()
+        self.cur = index + 1
+        self.loadImage()
+
+    
+    
+    def gotoIndex(self):
         idx = int(self.idxEntry.get())
         if 1 <= idx and idx <= self.total:
             self.saveImage()
