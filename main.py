@@ -143,8 +143,15 @@ class LabelTool:
         # example pannel for illustration
         self.egPanel = Frame(self.frame, border = 10)
         self.egPanel.grid(row = 1, column = 0, rowspan = 5, sticky = N)
-        self.tmpLabel2 = Label(self.egPanel, text = "Examples:")
-        self.tmpLabel2.pack(side = TOP, pady = 5)
+        self.canvasView = Canvas(self.egPanel, width =300, height = 6000)
+        self.scrollbarView = Scrollbar(self.egPanel, orient = 'vertical', command = self.canvasView.yview)
+        self.frameView = Frame(self.canvasView)
+        self.canvasView.configure(yscrollcommand = self.scrollbarView.set)
+        self.canvasView.pack(side='left', fill=BOTH, expand = True)
+        self.scrollbarView.pack(side='right', fill = Y, expand = False)
+        self.canvasView.create_window((0,0), window = self.frameView, anchor = 'nw')
+        
+        
         self.egLabels = []
         
             
@@ -175,15 +182,15 @@ class LabelTool:
         self.tmp = []
         self.egList = []
         for (i, f) in enumerate(self.imageList):
-            if i == 3:
+            if i == len():
                 break
             im = Image.open(f)
             r = min(SIZE[0] / im.size[0], SIZE[1] / im.size[1])
             new_size = int(r * im.size[0]), int(r * im.size[1])
             self.tmp.append(im.resize(new_size, Image.ANTIALIAS))
             self.egList.append(ImageTk.PhotoImage(self.tmp[-1]))
-            self.egLabels.append(Button(self.egPanel))
-            self.egLabels[-1].pack(side = TOP)
+            self.egLabels.append(Button(self.frameView))
+            self.egLabels[-1].pack()
             self.egLabels[i].config(image = self.egList[-1], width = SIZE[0], height = SIZE[1], command=lambda x=f: self.gotoImage(x))
         self.loadImage()
         self.print_log(str(self.total) + ' images loaded from ' + self.imageDir)
