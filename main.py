@@ -83,6 +83,7 @@ class LabelTool:
         self.mainPanel.grid(row = 1, column= 1, rowspan = 4, sticky = W+N)
         self.checkbox = Checkbutton(self.frame, text = 'Save to Yolo format', onvalue=1, offvalue=0, variable = self.save_to_yolo_format)
         self.checkbox.grid(row = 0, column = 3,  sticky = W+N)
+        self.checkbox.select()
         self.info_box_ctr_panel = Frame(self.frame)
         self.info_box_ctr_panel.grid(row=5, column=1, sticky=W + E)
         self.info_box = Text(self.info_box_ctr_panel, height=4)
