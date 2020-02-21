@@ -8,6 +8,8 @@ basewidth = 720
 baseheight = 540
 path = sys.argv[1]
 
+if path[-1] != os.path.sep:
+    path += os.path.sep
 for filename in os.listdir(path):
     if not os.path.isdir(os.path.join(path, filename)):
         base, extension = os.path.splitext(filename)
